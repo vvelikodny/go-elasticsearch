@@ -170,13 +170,13 @@ type ` + g.Endpoint.MethodWithNamespace() + `Request struct {`)
 
 	specialFields := []string{"index", "type", "id"}
 	for _, n := range specialFields {
-		if param, ok := g.Endpoint.URL.Paths[0].Parts[n]; ok {
+		if param, ok := g.Endpoint.URL.AllParts[n]; ok {
 			g.w("\n\t" + param.GoName())
 			g.w("\t" + param.GoType(true))
 		}
 	}
 
-	if len(g.Endpoint.URL.Paths[0].Parts) > 0 {
+	if len(g.Endpoint.URL.AllParts) > 0 {
 		g.w("\n")
 	}
 
@@ -184,12 +184,12 @@ type ` + g.Endpoint.MethodWithNamespace() + `Request struct {`)
 		g.w("\n\tBody io.Reader")
 	}
 
-	if len(g.Endpoint.URL.Paths[0].Parts) > 0 || g.Endpoint.Body != nil {
+	if len(g.Endpoint.URL.AllParts) > 0 || g.Endpoint.Body != nil {
 		g.w("\n")
 	}
 
 	for _, name := range g.Endpoint.URL.PartNamesSorted {
-		p, ok := g.Endpoint.URL.Paths[0].Parts[name]
+		p, ok := g.Endpoint.URL.AllParts[name]
 		if !ok {
 			panic(fmt.Sprintf("Part %q not found", name))
 		}
@@ -208,7 +208,7 @@ type ` + g.Endpoint.MethodWithNamespace() + `Request struct {`)
 
 	}
 
-	if len(g.Endpoint.URL.Paths[0].Parts) > 0 {
+	if len(g.Endpoint.URL.AllParts) > 0 {
 		g.w("\n")
 	}
 
@@ -218,7 +218,7 @@ type ` + g.Endpoint.MethodWithNamespace() + `Request struct {`)
 			panic(fmt.Sprintf("Parameter %q not found", name))
 		}
 
-		if _, ok := g.Endpoint.URL.Paths[0].Parts[name]; ok {
+		if _, ok := g.Endpoint.URL.AllParts[name]; ok {
 			continue // skip params which are also parts
 		}
 
@@ -342,7 +342,7 @@ func (f ` + g.Endpoint.MethodWithNamespace() + `) WithBody(v io.Reader) func(*` 
 
 	// Generate With... methods for parts
 	for _, pName := range g.Endpoint.URL.PartNamesSorted {
-		if p, ok := g.Endpoint.URL.Paths[0].Parts[pName]; ok {
+		if p, ok := g.Endpoint.URL.AllParts[pName]; ok {
 			if skipRequiredArgs[p.Name] && p.Name != "type" {
 				continue
 			}
@@ -355,7 +355,7 @@ func (f ` + g.Endpoint.MethodWithNamespace() + `) WithBody(v io.Reader) func(*` 
 
 	// Generate With... methods for params
 	for _, pName := range g.Endpoint.URL.ParamNamesSorted {
-		if _, ok := g.Endpoint.URL.Paths[0].Parts[pName]; ok {
+		if _, ok := g.Endpoint.URL.AllParts[pName]; ok {
 			continue // skip params which are also parts
 		}
 		if p, ok := g.Endpoint.URL.Params[pName]; ok {
@@ -438,7 +438,7 @@ func (r ` + g.Endpoint.MethodWithNamespace() + `Request) Do(ctx context.Context,
 	var defparts bool
 	switch g.Endpoint.Name {
 	case "index", "create", "delete", "explain", "exists", "get", "get_source", "update", "termvectors":
-		for _, p := range g.Endpoint.URL.Paths[0].Parts {
+		for _, p := range g.Endpoint.URL.AllParts {
 			if p.Default != nil {
 				var fieldName string
 				var fieldValue string

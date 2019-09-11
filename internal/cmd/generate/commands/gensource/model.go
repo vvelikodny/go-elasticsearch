@@ -38,13 +38,41 @@ func NewEndpoint(f io.Reader) (*Endpoint, error) {
 		endpoint.URL.Params = endpoint.Params
 	}
 
+	endpoint.URL.AllParts = make(map[string]*Part)
+
 	for _, path := range endpoint.URL.Paths {
 		for partName, part := range path.Parts {
 			part.Endpoint = &endpoint
 			part.Name = partName
 			part.Type = part.Type
 			part.Description = part.Description
-			part.Required = part.Required
+		}
+	}
+
+	var params [][]string
+	for _, path := range endpoint.URL.Paths {
+		var parts []string
+		for partName, _ := range path.Parts {
+			parts = append(parts, partName)
+		}
+		params = append(params, parts)
+	}
+
+	var paramsCounter = make(map[string]int)
+	for _, pp := range params {
+		for _, p := range pp {
+			paramsCounter[p] += 1
+		}
+	}
+
+	// Update the required field of path parts
+	for _, path := range endpoint.URL.Paths {
+		for partName, part := range path.Parts {
+			if p, ok := paramsCounter[partName]; ok {
+				if p == len(params) {
+					part.Required = true
+				}
+			}
 		}
 	}
 
@@ -53,9 +81,20 @@ func NewEndpoint(f io.Reader) (*Endpoint, error) {
 		p.Name = paramName
 	}
 
+	// Update the AllParts field
+	var partSeen = make(map[string]bool)
+	for _, path := range endpoint.URL.Paths {
+		for partName, part := range path.Parts {
+			if !partSeen[partName] {
+				endpoint.URL.AllParts[partName] = part
+			}
+			partSeen[partName] = true
+		}
+	}
+
 	var partNames []string
-	for _, param := range endpoint.URL.Paths[0].Parts {
-		partNames = append(partNames, param.Name)
+	for param, _ := range paramsCounter {
+		partNames = append(partNames, param)
 	}
 	sort.Slice(partNames, func(i, j int) bool {
 		return strings.Replace(partNames[i], "_", "", 1) < strings.Replace(partNames[j], "_", "", 1)
@@ -111,6 +150,7 @@ type URL struct {
 	Paths  []Path            `json:"paths"`
 	Params map[string]*Param `json:"params"`
 
+	AllParts         map[string]*Part
 	PartNamesSorted  []string
 	ParamNamesSorted []string
 }
