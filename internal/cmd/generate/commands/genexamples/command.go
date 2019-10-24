@@ -21,20 +21,36 @@ import (
 )
 
 var (
-	input  *string
-	output *string
-	color  *bool
-	debug  *bool
+	inputSrc  *string
+	outputSrc *string
+	debugSrc  *bool
+	colorSrc  *bool
+
+	inputDoc  *string
+	outputDoc *string
+	debugDoc  *bool
 )
 
 func init() {
-	input = genexamplesCmd.Flags().StringP("input", "i", "", "Path to a file with specification for examples")
-	output = genexamplesCmd.Flags().StringP("output", "o", "", "Path to a folder for generated output")
-	debug = genexamplesCmd.Flags().BoolP("debug", "d", false, "Print the generated source to terminal")
+	inputSrc = genexamplesSrcCmd.Flags().StringP("input", "i", "", "Path to a file with specification for examples")
+	outputSrc = genexamplesSrcCmd.Flags().StringP("output", "o", "", "Path to a folder for generated output")
+	debugSrc = genexamplesSrcCmd.Flags().BoolP("debug", "d", false, "Print the generated source to terminal")
+	colorSrc = genexamplesSrcCmd.Flags().BoolP("color", "c", true, "Syntax highlight the debug output")
 
-	genexamplesCmd.MarkFlagRequired("input")
-	genexamplesCmd.MarkFlagRequired("output")
-	genexamplesCmd.Flags().SortFlags = false
+	genexamplesSrcCmd.MarkFlagRequired("input")
+	genexamplesSrcCmd.MarkFlagRequired("output")
+	genexamplesSrcCmd.Flags().SortFlags = false
+
+	inputDoc = genexamplesDocCmd.Flags().StringP("input", "i", "", "Path to a file with specification for examples")
+	outputDoc = genexamplesDocCmd.Flags().StringP("output", "o", "", "Path to a folder for generated output")
+	debugDoc = genexamplesDocCmd.Flags().BoolP("debug", "d", false, "Print the generated source to terminal")
+
+	genexamplesDocCmd.MarkFlagRequired("input")
+	genexamplesDocCmd.MarkFlagRequired("output")
+	genexamplesDocCmd.Flags().SortFlags = false
+
+	genexamplesCmd.AddCommand(genexamplesSrcCmd)
+	genexamplesCmd.AddCommand(genexamplesDocCmd)
 
 	commands.RegisterCmd(genexamplesCmd)
 }
@@ -42,23 +58,44 @@ func init() {
 var genexamplesCmd = &cobra.Command{
 	Use:   "examples",
 	Short: "Generate the Go examples for documentation",
+}
+
+var genexamplesSrcCmd = &cobra.Command{
+	Use:   "src",
+	Short: "Generate the Go sources for examples",
 	Run: func(cmd *cobra.Command, args []string) {
-		command := &Command{
-			Input:       *input,
-			Output:      *output,
-			DebugSource: *debug,
-		}
-		err := command.Execute()
-		if err != nil {
+		command := &SrcCommand{Input: *inputSrc, Output: *outputSrc, DebugSource: *debugSrc, ColorizeSource: *colorSrc}
+		if err := command.Execute(); err != nil {
 			utils.PrintErr(err)
 			os.Exit(1)
 		}
 	},
 }
 
-// Command represents the "genexamples" command.
+var genexamplesDocCmd = &cobra.Command{
+	Use:   "doc",
+	Short: "Generate the ASCIIDoc examples",
+	Run: func(cmd *cobra.Command, args []string) {
+		command := &DocCommand{Input: *inputDoc, Output: *outputDoc, DebugSource: *debugDoc}
+		if err := command.Execute(); err != nil {
+			utils.PrintErr(err)
+			os.Exit(1)
+		}
+	},
+}
+
+// SrcCommand represents the command for generating Go source code.
 //
-type Command struct {
+type SrcCommand struct {
+	Input          string
+	Output         string
+	DebugSource    bool
+	ColorizeSource bool
+}
+
+// DocCommand represents the command for generating ASCIIDoc examples.
+//
+type DocCommand struct {
 	Input       string
 	Output      string
 	DebugSource bool
@@ -66,7 +103,7 @@ type Command struct {
 
 // Execute runs the command.
 //
-func (cmd *Command) Execute() (err error) {
+func (cmd *SrcCommand) Execute() error {
 	var (
 		processed int
 		skipped   int
@@ -74,7 +111,7 @@ func (cmd *Command) Execute() (err error) {
 	)
 
 	if cmd.Output != "-" {
-		outputDir := filepath.Join(cmd.Output, "doc")
+		outputDir := filepath.Join(cmd.Output, "src")
 		if err := os.MkdirAll(outputDir, 0775); err != nil {
 			return fmt.Errorf("error creating output directory %q: %s", outputDir, err)
 		}
@@ -92,7 +129,7 @@ func (cmd *Command) Execute() (err error) {
 	}
 
 	for _, e := range examples {
-		if e.Enabled() {
+		if e.Enabled() && e.Executable() {
 			if utils.IsTTY() {
 				fmt.Fprint(os.Stderr, "\x1b[2m")
 			}
@@ -122,16 +159,16 @@ func (cmd *Command) Execute() (err error) {
 	return nil
 }
 
-func (cmd *Command) processExample(e Example) error {
-	var out io.Reader
-
-	fName := filepath.Join(cmd.Output, "doc", fmt.Sprintf("%s.asciidoc", e.Digest))
-	out = e.Output()
+func (cmd *SrcCommand) processExample(e Example) error {
+	g := SrcGenerator{Example: e}
+	fName := filepath.Join(cmd.Output, "src", g.Filename())
+	out := g.Output()
 
 	if cmd.DebugSource {
 		var (
 			err error
 			buf bytes.Buffer
+			src io.Reader
 			tee = io.TeeReader(out, &buf)
 		)
 
@@ -141,6 +178,18 @@ func (cmd *Command) processExample(e Example) error {
 		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
 		if utils.IsTTY() {
 			fmt.Fprint(os.Stderr, "\x1b[0m")
+		}
+
+		if cmd.ColorizeSource {
+			src, err = utils.Chromatize(tee)
+			if err != nil {
+				return fmt.Errorf("error syntax highligting the output: %s", err)
+			}
+
+			_, err = io.Copy(os.Stderr, src)
+			if err != nil {
+				return fmt.Errorf("error copying output: %s", err)
+			}
 		}
 
 		if _, err = io.Copy(os.Stderr, tee); err != nil {
@@ -169,5 +218,11 @@ func (cmd *Command) processExample(e Example) error {
 		}
 	}
 
+	return nil
+}
+
+// Execute runs the command.
+//
+func (cmd *DocCommand) Execute() error {
 	return nil
 }
