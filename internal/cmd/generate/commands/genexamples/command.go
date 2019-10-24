@@ -5,9 +5,12 @@
 package genexamples
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -27,7 +30,6 @@ var (
 func init() {
 	input = genexamplesCmd.Flags().StringP("input", "i", "", "Path to a file with specification for examples")
 	output = genexamplesCmd.Flags().StringP("output", "o", "", "Path to a folder for generated output")
-	color = genexamplesCmd.Flags().BoolP("color", "c", true, "Syntax highlight the debug output")
 	debug = genexamplesCmd.Flags().BoolP("debug", "d", false, "Print the generated source to terminal")
 
 	genexamplesCmd.MarkFlagRequired("input")
@@ -42,10 +44,9 @@ var genexamplesCmd = &cobra.Command{
 	Short: "Generate the Go examples for documentation",
 	Run: func(cmd *cobra.Command, args []string) {
 		command := &Command{
-			Input:          *input,
-			Output:         *output,
-			DebugSource:    *debug,
-			ColorizeSource: *color,
+			Input:       *input,
+			Output:      *output,
+			DebugSource: *debug,
 		}
 		err := command.Execute()
 		if err != nil {
@@ -58,10 +59,9 @@ var genexamplesCmd = &cobra.Command{
 // Command represents the "genexamples" command.
 //
 type Command struct {
-	Input          string
-	Output         string
-	DebugSource    bool
-	ColorizeSource bool
+	Input       string
+	Output      string
+	DebugSource bool
 }
 
 // Execute runs the command.
@@ -73,15 +73,22 @@ func (cmd *Command) Execute() (err error) {
 		start     = time.Now()
 	)
 
+	if cmd.Output != "-" {
+		outputDir := filepath.Join(cmd.Output, "doc")
+		if err := os.MkdirAll(outputDir, 0775); err != nil {
+			return fmt.Errorf("error creating output directory %q: %s", outputDir, err)
+		}
+	}
+
 	f, err := os.Open(cmd.Input)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading input: %s", err)
 	}
 	defer f.Close()
 
 	var examples []Example
 	if err := json.NewDecoder(f).Decode(&examples); err != nil {
-		return err
+		return fmt.Errorf("error decoding input: %s", err)
 	}
 
 	for _, e := range examples {
@@ -116,6 +123,51 @@ func (cmd *Command) Execute() (err error) {
 }
 
 func (cmd *Command) processExample(e Example) error {
-	fmt.Printf("%+v\n\n", e.Source)
+	var out io.Reader
+
+	fName := filepath.Join(cmd.Output, "doc", fmt.Sprintf("%s.asciidoc", e.Digest))
+	out = e.Output()
+
+	if cmd.DebugSource {
+		var (
+			err error
+			buf bytes.Buffer
+			tee = io.TeeReader(out, &buf)
+		)
+
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[2m")
+		}
+		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[0m")
+		}
+
+		if _, err = io.Copy(os.Stderr, tee); err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+
+		fmt.Fprintf(os.Stderr, "\n\n")
+
+		out = &buf
+	}
+
+	if cmd.Output == "-" {
+		if _, err := io.Copy(os.Stdout, out); err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+	} else {
+		f, err := os.OpenFile(fName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("error creating file: %s", err)
+		}
+		if _, err = io.Copy(f, out); err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("error closing file: %s", err)
+		}
+	}
+
 	return nil
 }

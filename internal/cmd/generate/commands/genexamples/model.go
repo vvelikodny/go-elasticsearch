@@ -5,7 +5,9 @@
 package genexamples
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"sort"
 )
 
@@ -39,4 +41,24 @@ func (e Example) Enabled() bool {
 
 func (e Example) ID() string {
 	return fmt.Sprintf("%s:%d", e.SourceLocation.File, e.SourceLocation.Line)
+}
+
+func (e Example) GithubURL() string {
+	return fmt.Sprintf("https://github.com/elastic/elasticsearch/blob/master/docs/reference/%s#L%d", e.SourceLocation.File, e.SourceLocation.Line)
+}
+
+func (e Example) Output() io.Reader {
+	var out bytes.Buffer
+
+	out.WriteString("////\n\n")
+	out.WriteString(fmt.Sprintf("Generated from %s\n\n", e.GithubURL()))
+	out.WriteString(e.Source)
+	out.WriteString("\n\n////\n\n")
+
+	out.WriteString("[source, go]\n")
+	out.WriteString("----\n")
+	out.WriteString(`panic("NOT IMPLEMENTED")` + "\n")
+	out.WriteString("----\n")
+
+	return &out
 }
