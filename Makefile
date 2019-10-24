@@ -152,7 +152,7 @@ apidiff: ## Display API incompabilities
 		fi; \
 	}
 
-backport: ## Backport one or more commits from master into version branches
+backport: ## Backport commits from master into version branches
 ifeq ($(origin commits), undefined)
 	@echo "Missing commit(s), exiting..."
 	@exit 2
@@ -387,6 +387,10 @@ endif
 		mv $(PWD)/esapi/test/xpack/xpack_ml* $(PWD)/esapi/test/xpack/ml/ && \
 		mv $(PWD)/esapi/test/xpack/ml/xpack_ml__jobs_crud_test.go $(PWD)/esapi/test/xpack/ml-crud/; \
 	}
+
+gen-docs:  ## Generate the skeleton of documentation examples
+	cd internal/cmd/generate && \
+	go run main.go examples --input '$(PWD)/tmp/alternatives_report.json' --output '$(PWD)/tmp/doc-examples'
 
 ##@ Other
 #------------------------------------------------------------------------------
