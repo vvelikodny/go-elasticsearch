@@ -16,7 +16,10 @@ func init() {
 
 // EnabledFiles contains a list of files where documentation should be generated.
 //
-var EnabledFiles = []string{"getting-started.asciidoc"}
+var EnabledFiles = []string{
+	"getting-started.asciidoc",
+	"setup/install/check-running.asciidoc",
+}
 
 // Example represents the code example in documentation.
 //
@@ -32,7 +35,9 @@ type Example struct {
 	Source string
 }
 
-func (e Example) Enabled() bool {
+// IsEnabled returns true when the example should be processed.
+//
+func (e Example) IsEnabled() bool {
 	index := sort.SearchStrings(EnabledFiles, e.SourceLocation.File)
 
 	if index > len(EnabledFiles)-1 || EnabledFiles[index] != e.SourceLocation.File {
@@ -42,15 +47,33 @@ func (e Example) Enabled() bool {
 	return true
 }
 
-func (e Example) Executable() bool {
+// IsExecutable returns true when the example contains a request.
+//
+func (e Example) IsExecutable() bool {
 	matched, _ := regexp.MatchString(`^HEAD|GET|PUT|DELETE|POST`, e.Source)
 	return matched
 }
 
+// IsTranslated returns true when the example can be converted to Go source code.
+//
+func (e Example) IsTranslated() bool {
+	return Translator{Example: e}.IsTranslated()
+}
+
+// ID returns example identifier.
+//
 func (e Example) ID() string {
 	return fmt.Sprintf("%s:%d", e.SourceLocation.File, e.SourceLocation.Line)
 }
 
+// GithubURL returns a link for the example source.
+//
 func (e Example) GithubURL() string {
 	return fmt.Sprintf("https://github.com/elastic/elasticsearch/blob/master/docs/reference/%s#L%d", e.SourceLocation.File, e.SourceLocation.Line)
+}
+
+// Translated returns the code translated from Console to Go.
+//
+func (e Example) Translated() (string, error) {
+	return Translator{Example: e}.Translate()
 }

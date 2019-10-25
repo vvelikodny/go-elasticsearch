@@ -115,9 +115,11 @@ type DocCommand struct {
 //
 func (cmd *SrcCommand) Execute() error {
 	var (
-		processed int
-		skipped   int
-		start     = time.Now()
+		processed  int
+		skipped    int
+		translated int
+		start      = time.Now()
+		seen       = make(map[string]bool)
 	)
 
 	if cmd.Output != "-" {
@@ -139,7 +141,10 @@ func (cmd *SrcCommand) Execute() error {
 	}
 
 	for _, e := range examples {
-		if e.Enabled() && e.Executable() {
+		if seen[e.Digest] {
+			continue
+		}
+		if e.IsEnabled() && e.IsExecutable() {
 			if utils.IsTTY() {
 				fmt.Fprint(os.Stderr, "\x1b[2m")
 			}
@@ -152,16 +157,26 @@ func (cmd *SrcCommand) Execute() error {
 				return fmt.Errorf("error processing example %s: %v", e.ID(), err)
 			}
 			processed++
+			if e.IsTranslated() {
+				translated++
+			}
 		} else {
 			skipped++
 		}
+		seen[e.Digest] = true
 	}
 
 	if utils.IsTTY() {
 		fmt.Fprint(os.Stderr, "\x1b[2m")
 	}
 	fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
-	fmt.Fprintf(os.Stderr, "Processed %d examples, skipped %d examples in %s\n", processed, skipped, time.Since(start).Truncate(time.Millisecond))
+	fmt.Fprintf(
+		os.Stderr,
+		"Processed %d examples, translated %d, skipped %d examples in %s\n",
+		processed,
+		translated,
+		skipped,
+		time.Since(start).Truncate(time.Millisecond))
 	if utils.IsTTY() {
 		fmt.Fprint(os.Stderr, "\x1b[0m")
 	}
