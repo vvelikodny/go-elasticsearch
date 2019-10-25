@@ -189,6 +189,9 @@ func (cmd *SrcCommand) processExample(e Example) error {
 				TabWidth:   1,
 			})
 		if err != nil {
+			if cmd.DebugSource {
+				utils.PrintSourceWithErr(&buf, err)
+			}
 			return err
 		}
 
