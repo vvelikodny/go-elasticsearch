@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/elastic/go-elasticsearch/v8/internal/cmd/generate/utils"
 )
@@ -199,6 +200,45 @@ func init() {
 					src.WriteString("\tes." + apiName + ".WithPretty(),\n")
 					src.WriteString(")")
 				}
+
+				return src.String()
+			}},
+
+		// Delete()
+		//
+		{Pattern: `^DELETE /?\w+/_doc/\w+`,
+			Func: func(e Example) string {
+				re := regexp.MustCompile(`(?ms)^DELETE /?(?P<index>\w+)/_doc/(?P<id>\w+)(?P<params>\??\S+)?\s*$`)
+				matches := re.FindStringSubmatch(e.Source)
+
+				var src strings.Builder
+				fmt.Fprintf(&src, "\tres, err := es.Delete(")
+
+				if matches[3] != "" {
+					fmt.Fprintf(&src, "\t%q,\n\t%q,\n", matches[1], matches[2])
+					params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[3], "/"), "?"))
+					if err != nil {
+						fmt.Println(e.Source)
+						panic(fmt.Sprintf("Error parsing URL params: %s", err))
+					}
+					for k, v := range params {
+						val := strings.Join(v, ",")
+						if k == "timeout" {
+							dur, err := time.ParseDuration(v[0])
+							if err != nil {
+								panic("Cannot parse duration: " + fmt.Sprintf("%s", err))
+							}
+							val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
+							fmt.Fprintf(&src, "\tes.Delete.With%s(%s),\n", utils.NameToGo(k), val)
+						} else {
+							fmt.Fprintf(&src, "\tes.Delete.With%s(%q),\n", utils.NameToGo(k), val)
+						}
+					}
+					src.WriteString("\tes.Delete.WithPretty(),\n")
+				} else {
+					fmt.Fprintf(&src, "\t%q, %q, es.Delete.WithPretty()", matches[1], matches[2])
+				}
+				src.WriteString(")")
 
 				return src.String()
 			}},

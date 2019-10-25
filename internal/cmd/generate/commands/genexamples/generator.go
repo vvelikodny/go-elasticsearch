@@ -60,7 +60,7 @@ var (
 	}
 	out.WriteString("// " + strings.Repeat("-", 80) + "\n\n")
 
-	fmt.Fprintf(&out, `func Test__%s(t *testing.T) {`+"\n", g.Example.Digest)
+	fmt.Fprintf(&out, `func Test_%s_%s(t *testing.T) {`+"\n", g.Example.Chapter(), g.Example.Digest)
 	out.WriteString("\t")
 	if !g.Example.IsTranslated() {
 		out.WriteString("// ")

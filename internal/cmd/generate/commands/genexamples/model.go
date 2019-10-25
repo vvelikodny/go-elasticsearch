@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 )
 
 func init() {
@@ -17,7 +18,9 @@ func init() {
 // EnabledFiles contains a list of files where documentation should be generated.
 //
 var EnabledFiles = []string{
+	"docs/delete.asciidoc",
 	"docs/get.asciidoc",
+	"docs/index.asciidoc",
 	"getting-started.asciidoc",
 	"setup/install/check-running.asciidoc",
 }
@@ -65,6 +68,13 @@ func (e Example) IsTranslated() bool {
 //
 func (e Example) ID() string {
 	return fmt.Sprintf("%s:%d", e.SourceLocation.File, e.SourceLocation.Line)
+}
+
+// Chapter returns the example chapter.
+//
+func (e Example) Chapter() string {
+	r := strings.NewReplacer("/", "_", "-", "_", ".asciidoc", "")
+	return r.Replace(e.SourceLocation.File)
 }
 
 // GithubURL returns a link for the example source.
