@@ -17,6 +17,7 @@ func init() {
 // EnabledFiles contains a list of files where documentation should be generated.
 //
 var EnabledFiles = []string{
+	"docs/get.asciidoc",
 	"getting-started.asciidoc",
 	"setup/install/check-running.asciidoc",
 }

@@ -53,9 +53,14 @@ var (
 
 `)
 
-	out.WriteString(fmt.Sprintf("// Generated from %s\n//\n", g.Example.GithubURL()))
+	fmt.Fprintf(&out, "// Generated from %s\n//\n", g.Example.GithubURL())
+	out.WriteString("// " + strings.Repeat("-", 80) + "\n")
+	for _, l := range strings.Split(g.Example.Source, "\n") {
+		out.WriteString("// " + l + "\n")
+	}
+	out.WriteString("// " + strings.Repeat("-", 80) + "\n\n")
 
-	out.WriteString(fmt.Sprintf(`func Test__%s(t *testing.T) {`+"\n", g.Example.Digest))
+	fmt.Fprintf(&out, `func Test__%s(t *testing.T) {`+"\n", g.Example.Digest)
 	out.WriteString("\t")
 	if !g.Example.IsTranslated() {
 		out.WriteString("// ")
@@ -67,11 +72,6 @@ var (
 
 		out.WriteString(strings.Split(g.Example.Source, "\n")[0])
 		out.WriteString("`)\n")
-		out.WriteString("\t// " + strings.Repeat("-", 80) + "\n")
-		for _, l := range strings.Split(g.Example.Source, "\n") {
-			out.WriteString("\t// " + l + "\n")
-		}
-		out.WriteString("\t//" + strings.Repeat("-", 80) + "\n")
 	} else {
 		src, err := g.Example.Translated()
 		if err != nil {
