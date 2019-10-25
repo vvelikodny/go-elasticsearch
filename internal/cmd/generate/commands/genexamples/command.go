@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/tools/imports"
 
 	"github.com/elastic/go-elasticsearch/v8/internal/cmd/generate/commands"
 	"github.com/elastic/go-elasticsearch/v8/internal/cmd/generate/utils"
@@ -25,6 +26,7 @@ var (
 	outputSrc *string
 	debugSrc  *bool
 	colorSrc  *bool
+	gofmtSrc  *bool
 
 	inputDoc  *string
 	outputDoc *string
@@ -36,6 +38,7 @@ func init() {
 	outputSrc = genexamplesSrcCmd.Flags().StringP("output", "o", "", "Path to a folder for generated output")
 	debugSrc = genexamplesSrcCmd.Flags().BoolP("debug", "d", false, "Print the generated source to terminal")
 	colorSrc = genexamplesSrcCmd.Flags().BoolP("color", "c", true, "Syntax highlight the debug output")
+	gofmtSrc = genexamplesSrcCmd.Flags().BoolP("gofmt", "f", true, "Format generated output with 'gofmt'")
 
 	genexamplesSrcCmd.MarkFlagRequired("input")
 	genexamplesSrcCmd.MarkFlagRequired("output")
@@ -64,7 +67,13 @@ var genexamplesSrcCmd = &cobra.Command{
 	Use:   "src",
 	Short: "Generate the Go sources for examples",
 	Run: func(cmd *cobra.Command, args []string) {
-		command := &SrcCommand{Input: *inputSrc, Output: *outputSrc, DebugSource: *debugSrc, ColorizeSource: *colorSrc}
+		command := &SrcCommand{
+			Input:          *inputSrc,
+			Output:         *outputSrc,
+			DebugSource:    *debugSrc,
+			ColorizeSource: *colorSrc,
+			GofmtSource:    *gofmtSrc,
+		}
 		if err := command.Execute(); err != nil {
 			utils.PrintErr(err)
 			os.Exit(1)
@@ -91,6 +100,7 @@ type SrcCommand struct {
 	Output         string
 	DebugSource    bool
 	ColorizeSource bool
+	GofmtSource    bool
 }
 
 // DocCommand represents the command for generating ASCIIDoc examples.
@@ -163,6 +173,27 @@ func (cmd *SrcCommand) processExample(e Example) error {
 	g := SrcGenerator{Example: e}
 	fName := filepath.Join(cmd.Output, "src", g.Filename())
 	out := g.Output()
+
+	if cmd.GofmtSource {
+		var buf bytes.Buffer
+		buf.ReadFrom(out)
+
+		bout, err := imports.Process(
+			"example_test.go",
+			buf.Bytes(),
+			&imports.Options{
+				AllErrors:  true,
+				Comments:   true,
+				FormatOnly: false,
+				TabIndent:  true,
+				TabWidth:   1,
+			})
+		if err != nil {
+			return err
+		}
+
+		out = bytes.NewBuffer(bout)
+	}
 
 	if cmd.DebugSource {
 		var (
