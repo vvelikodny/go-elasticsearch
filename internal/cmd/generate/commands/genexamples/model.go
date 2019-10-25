@@ -10,6 +10,10 @@ import (
 	"sort"
 )
 
+func init() {
+	sort.Strings(EnabledFiles)
+}
+
 // EnabledFiles contains a list of files where documentation should be generated.
 //
 var EnabledFiles = []string{"getting-started.asciidoc"}
