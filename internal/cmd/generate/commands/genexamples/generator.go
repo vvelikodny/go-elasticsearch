@@ -21,8 +21,8 @@ type SrcGenerator struct {
 // DocGenerator represents the generator for Go source files.
 //
 type DocGenerator struct {
-	b       bytes.Buffer
-	Example Example
+	b      bytes.Buffer
+	Source io.Reader
 }
 
 func (g SrcGenerator) Filename() string {
@@ -88,6 +88,23 @@ var (
 	}
 
 	out.WriteString("}\n")
+
+	return &out, nil
+}
+
+func (g DocGenerator) Output() (io.Reader, error) {
+	var out bytes.Buffer
+
+	// TODO(karmi): Header
+
+	out.WriteString("[source, go]\n----\n")
+
+	_, err := out.ReadFrom(g.Source)
+	if err != nil {
+		return nil, err
+	}
+
+	out.WriteString("----\n")
 
 	return &out, nil
 }

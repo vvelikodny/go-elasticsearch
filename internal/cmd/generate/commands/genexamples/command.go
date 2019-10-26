@@ -5,12 +5,15 @@
 package genexamples
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -279,5 +282,140 @@ func (cmd *SrcCommand) processExample(e Example) error {
 // Execute runs the command.
 //
 func (cmd *DocCommand) Execute() error {
+	var (
+		processed int
+		start     = time.Now()
+	)
+
+	if cmd.Output != "-" {
+		outputDir := filepath.Join(cmd.Output, "doc")
+		if err := os.MkdirAll(outputDir, 0775); err != nil {
+			return fmt.Errorf("error creating output directory %q: %s", outputDir, err)
+		}
+	}
+
+	files, err := ioutil.ReadDir(cmd.Input)
+	if err != nil {
+		return fmt.Errorf("failed to read input: %s", err)
+	}
+
+	for _, fi := range files {
+		if !strings.HasSuffix(fi.Name(), ".go") {
+			continue
+		}
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[2m")
+		}
+		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+		fmt.Fprintf(os.Stderr, "Processing file %s\n", fi.Name())
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[0m")
+		}
+
+		f, err := os.Open(filepath.Join(cmd.Input, fi.Name()))
+		if err != nil {
+			return fmt.Errorf("error reading file: %s", err)
+		}
+		defer f.Close()
+
+		if err := cmd.processFile(f); err != nil {
+			return fmt.Errorf("error processing file %q: %s", fi.Name(), err)
+		}
+		processed++
+	}
+
+	if utils.IsTTY() {
+		fmt.Fprint(os.Stderr, "\x1b[2m")
+	}
+	fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+	fmt.Fprintf(
+		os.Stderr,
+		"Processed %d examples examples in %s\n",
+		processed,
+		time.Since(start).Truncate(time.Millisecond))
+	if utils.IsTTY() {
+		fmt.Fprint(os.Stderr, "\x1b[0m")
+	}
+
+	return nil
+}
+
+func (cmd *DocCommand) processFile(f *os.File) error {
+	var (
+		src bytes.Buffer
+
+		sc         = bufio.NewScanner(f)
+		reBegin    = regexp.MustCompile(`^\s?// tag:(\w+)\s?`)
+		reEnd      = regexp.MustCompile(`^\s?// end:\w+\s?`)
+		digest     string
+		capture    bool
+		outputFile string
+	)
+
+	for sc.Scan() {
+		line := sc.Text()
+
+		if reBegin.MatchString(line) {
+			digest = reBegin.FindStringSubmatch(line)[1]
+			capture = true
+		}
+		if reEnd.MatchString(line) {
+			capture = false
+		}
+
+		if capture && !reBegin.MatchString(line) {
+			line = strings.TrimPrefix(line, "\t")
+			src.WriteString(line)
+			src.WriteString("\n")
+		}
+	}
+
+	if err := sc.Err(); err != nil {
+		return err
+	}
+
+	out, err := DocGenerator{Source: &src}.Output()
+	if err != nil {
+		return fmt.Errorf("error generating output: ", err)
+	}
+
+	if cmd.DebugSource {
+		var buf bytes.Buffer
+		tee := io.TeeReader(out, &buf)
+
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[2m")
+		}
+		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+		if utils.IsTTY() {
+			fmt.Fprint(os.Stderr, "\x1b[0m")
+		}
+		_, err = io.Copy(os.Stderr, tee)
+		if err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+
+		out = &buf
+	}
+
+	if cmd.Output == "-" {
+		if _, err := io.Copy(os.Stdout, out); err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+	} else {
+		outputFile = filepath.Join(cmd.Output, "doc", digest+".asciidoc")
+
+		f, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("error creating file: %s", err)
+		}
+		if _, err = io.Copy(f, out); err != nil {
+			return fmt.Errorf("error copying output: %s", err)
+		}
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("error closing file: %s", err)
+		}
+	}
+
 	return nil
 }
