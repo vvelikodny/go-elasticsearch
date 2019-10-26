@@ -73,7 +73,7 @@ var ConsoleToGo = []TranslateRule{
 			}
 
 			src.WriteString("\tes.Index.WithPretty(),\n")
-			src.WriteString("\t)\n")
+			src.WriteString("\t)")
 
 			return src.String(), nil
 		}},
@@ -267,7 +267,7 @@ var ConsoleToGo = []TranslateRule{
 
 			src.WriteString("\tes.Search.WithPretty(),\n")
 
-			src.WriteString("\t)\n")
+			src.WriteString("\t)")
 
 			return src.String(), nil
 		}},
