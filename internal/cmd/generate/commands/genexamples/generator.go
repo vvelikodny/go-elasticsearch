@@ -35,7 +35,13 @@ func (g SrcGenerator) Filename() string {
 func (g SrcGenerator) Output() (io.Reader, error) {
 	var out bytes.Buffer
 
-	out.WriteString(`package elasticsearch_test
+	out.WriteString(`// Licensed to Elasticsearch B.V under one or more agreements.
+// Elasticsearch B.V. licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information.
+//
+// Code generated, DO NOT EDIT
+
+package elasticsearch_test
 
 import (
 	"fmt"
@@ -53,7 +59,7 @@ var (
 
 `)
 
-	fmt.Fprintf(&out, "// Generated from %s\n//\n", g.Example.GithubURL())
+	fmt.Fprintf(&out, "// <%s>\n//\n", g.Example.GithubURL())
 	out.WriteString("// " + strings.Repeat("-", 80) + "\n")
 	for _, l := range strings.Split(g.Example.Source, "\n") {
 		out.WriteString("// " + l + "\n")
