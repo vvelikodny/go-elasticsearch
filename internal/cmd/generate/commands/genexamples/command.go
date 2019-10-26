@@ -187,7 +187,13 @@ func (cmd *SrcCommand) Execute() error {
 func (cmd *SrcCommand) processExample(e Example) error {
 	g := SrcGenerator{Example: e}
 	fName := filepath.Join(cmd.Output, "src", g.Filename())
-	out := g.Output()
+	out, err := g.Output()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+		fmt.Fprintln(os.Stderr, e.Source)
+		fmt.Fprintln(os.Stderr, strings.Repeat("━", utils.TerminalWidth()))
+		return err
+	}
 
 	if cmd.GofmtSource {
 		var buf bytes.Buffer

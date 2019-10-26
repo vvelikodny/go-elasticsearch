@@ -32,7 +32,7 @@ func (g SrcGenerator) Filename() string {
 		g.Example.Digest)
 }
 
-func (g SrcGenerator) Output() io.Reader {
+func (g SrcGenerator) Output() (io.Reader, error) {
 	var out bytes.Buffer
 
 	out.WriteString(`package elasticsearch_test
@@ -75,7 +75,7 @@ var (
 	} else {
 		src, err := g.Example.Translated()
 		if err != nil {
-			out.WriteString("\t" + `panic("Error translating example")`)
+			return nil, err
 		} else {
 			out.WriteString(src)
 		}
@@ -83,5 +83,5 @@ var (
 
 	out.WriteString("}\n")
 
-	return &out
+	return &out, nil
 }
