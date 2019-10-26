@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,47 +30,46 @@ const tail = "\t" + `if err != nil {
 //
 var ConsoleToGo = []TranslateRule{
 
-	// Info()
-	//
-	{Pattern: "^GET /$",
+	{ // ----- Info() -----------------------------------------------------------
+		Pattern: "^GET /$",
 		Func: func(e Example) (string, error) {
-			return `res, err := es.Info()`, nil
+			return "res, err := es.Info()", nil
 		}},
 
-	// Cat.Health()
-	//
-	{Pattern: `^GET /_cat/health\?v`,
+	{ // ----- Cat.Health() -----------------------------------------------------
+		Pattern: `^GET /_cat/health\?v`,
 		Func: func(e Example) (string, error) {
 			return "\tres, err := es.Cat.Health(es.Cat.Health.WithV(true))", nil
 		}},
 
-	// Index()
-	//
-	{Pattern: `^PUT /?\w+/_doc/\w+`,
+	{ // ----- Index() ---------------------------------------------------------
+		Pattern: `^PUT /?\w+/_doc/\w+`,
 		Func: func(e Example) (string, error) {
+			var src strings.Builder
+
 			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>\w+)/_doc/(?P<id>\w+)(?P<params>\??[\S]+)?\s(?P<body>.*)`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
-			var (
-				src  strings.Builder
-				body bytes.Buffer
-			)
 			src.WriteString("\tres, err := es.Index(\n")
+
 			fmt.Fprintf(&src, "\t%q,\n", matches[1])
 
-			switch len(matches) {
-			case 4:
-				json.Indent(&body, []byte(matches[3]), "\t\t", "  ")
-				fmt.Fprintf(&src, "\tstrings.NewReader(`%s`),\n", body.String())
-				fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[2])
-			case 5:
-				var body bytes.Buffer
-				json.Indent(&body, []byte(matches[4]), "\t\t", "  ")
-				fmt.Fprintf(&src, "\tstrings.NewReader(`%s`),\n", body.String())
-				fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[2])
+			body, _ := bodyStringToReader(matches[4])
+			fmt.Fprintf(&src, "\t%s,\n", body)
+
+			fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[2])
+
+			if matches[3] != "" {
+				params, err := queryToParams(matches[3])
+				if err != nil {
+					return "", fmt.Errorf("error parsing URL params: %s", err)
+				}
+				for k, v := range params {
+					fmt.Fprintf(&src, "\tes.Index.With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				}
 			}
 
 			src.WriteString("\tes.Index.WithPretty(),\n")
@@ -78,31 +78,28 @@ var ConsoleToGo = []TranslateRule{
 			return src.String(), nil
 		}},
 
-	// Indices.Create()
-	//
-	{Pattern: `^PUT /?[\S]+\s?(?P<body>.+)?`,
+	{ // ----- Indices.Create() -------------------------------------------------
+		Pattern: `^PUT /?[\S]+\s?(?P<body>.+)?`,
 		Func: func(e Example) (string, error) {
+			var src strings.Builder
+
 			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>[\S]+)(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
-			var (
-				src  strings.Builder
-				body bytes.Buffer
-			)
-
 			src.WriteString("\tres, err := es.Indices.Create(")
 			if matches[2] != "" || matches[3] != "" {
 				fmt.Fprintf(&src, "\n\t%q,\n", matches[1])
 
 				if matches[3] != "" {
-					json.Indent(&body, []byte(matches[3]), "\t\t", "  ")
-					fmt.Fprintf(&src, "\tes.Indices.Create.WithBody(strings.NewReader(`%s`)),\n", body.String())
+					body, _ := bodyStringToReader(matches[3])
+					fmt.Fprintf(&src, "\tes.Indices.Create.WithBody(%s),\n", body)
 				}
+
 				if matches[2] != "" {
-					params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[2], "/"), "?"))
+					params, err := queryToParams(matches[2])
 					if err != nil {
 						return "", fmt.Errorf("error parsing URL params: %s", err)
 					}
@@ -119,17 +116,16 @@ var ConsoleToGo = []TranslateRule{
 			return src.String(), nil
 		}},
 
-	// Get() or GetSource()
-	//
-	{Pattern: `^GET /?\w+/(_doc|_source)/\w+`,
+	{ // ----- Get() or GetSource() ---------------------------------------------
+		Pattern: `^GET /?\w+/(_doc|_source)/\w+`,
 		Func: func(e Example) (string, error) {
+			var src strings.Builder
+
 			re := regexp.MustCompile(`(?ms)^GET /?(?P<index>\w+)/(?P<api>_doc|_source)/(?P<id>\w+)(?P<params>\??\S+)?\s*$`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
-
-			var src strings.Builder
 
 			var apiName string
 			switch matches[2] {
@@ -141,8 +137,8 @@ var ConsoleToGo = []TranslateRule{
 				return "", fmt.Errorf("unknown API variant %q", matches[2])
 			}
 
-			if len(matches) < 5 {
-				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(%q, %q, es."+apiName+".WithPretty())", matches[1], matches[3])
+			if matches[4] == "" {
+				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(%q, %q, es."+apiName+".WithPretty()", matches[1], matches[3])
 			} else {
 				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(\n\t%q,\n\t%q,\n\t", matches[1], matches[3])
 				params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[4], "/"), "?"))
@@ -154,23 +150,23 @@ var ConsoleToGo = []TranslateRule{
 					fmt.Fprintf(&src, "\tes."+apiName+".With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
 				}
 				src.WriteString("\tes." + apiName + ".WithPretty(),\n")
-				src.WriteString(")")
 			}
+
+			src.WriteString(")")
 
 			return src.String(), nil
 		}},
 
-	// Exists() or ExistsSource()
-	//
-	{Pattern: `^HEAD /?\w+/(_doc|_source)/\w+`,
+	{ // ----- Exists() or ExistsSource() ---------------------------------------
+		Pattern: `^HEAD /?\w+/(_doc|_source)/\w+`,
 		Func: func(e Example) (string, error) {
+			var src strings.Builder
+
 			re := regexp.MustCompile(`(?ms)^HEAD /?(?P<index>\w+)/(?P<api>_doc|_source)/(?P<id>\w+)(?P<params>\??[\S]+)?\s*$`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
-
-			var src strings.Builder
 
 			var apiName string
 			switch matches[2] {
@@ -182,8 +178,8 @@ var ConsoleToGo = []TranslateRule{
 				return "", fmt.Errorf("unknown API variant %q", matches[2])
 			}
 
-			if len(matches) < 5 {
-				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(%q, %q, es."+apiName+".WithPretty())", matches[1], matches[2])
+			if matches[4] == "" {
+				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(%q, %q, es."+apiName+".WithPretty()", matches[1], matches[2])
 			} else {
 				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(\n\t%q,\n\t%q,\n\t", matches[1], matches[2])
 				params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[4], "/"), "?"))
@@ -194,23 +190,24 @@ var ConsoleToGo = []TranslateRule{
 					fmt.Fprintf(&src, "\tes."+apiName+".With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
 				}
 				src.WriteString("\tes." + apiName + ".WithPretty(),\n")
-				src.WriteString(")")
 			}
+
+			src.WriteString(")")
 
 			return src.String(), nil
 		}},
 
-	// Delete()
-	//
-	{Pattern: `^DELETE /?\w+/_doc/\w+`,
+	{ // ----- Delete() ---------------------------------------------------------
+		Pattern: `^DELETE /?\w+/_doc/\w+`,
 		Func: func(e Example) (string, error) {
+			var src strings.Builder
+
 			re := regexp.MustCompile(`(?ms)^DELETE /?(?P<index>\w+)/_doc/(?P<id>\w+)(?P<params>\??\S+)?\s*$`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
-			var src strings.Builder
 			fmt.Fprintf(&src, "\tres, err := es.Delete(")
 
 			if matches[3] != "" {
@@ -227,10 +224,10 @@ var ConsoleToGo = []TranslateRule{
 							return "", fmt.Errorf("error parsing duration: %s", err)
 						}
 						val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
-						fmt.Fprintf(&src, "\tes.Delete.With%s(%s),\n", utils.NameToGo(k), val)
 					} else {
-						fmt.Fprintf(&src, "\tes.Delete.With%s(%q),\n", utils.NameToGo(k), val)
+						val = strconv.Quote(val)
 					}
+					fmt.Fprintf(&src, "\tes.Delete.With%s(%s),\n", utils.NameToGo(k), val)
 				}
 				src.WriteString("\tes.Delete.WithPretty(),\n")
 			} else {
@@ -241,23 +238,35 @@ var ConsoleToGo = []TranslateRule{
 			return src.String(), nil
 		}},
 
-	// Search()
-	//
-	{Pattern: `^GET /\w+/_search`,
+	{ // ----- Search() ---------------------------------------------------------
+		Pattern: `^GET /\w+/_search`,
 		Func: func(e Example) (string, error) {
-			re := regexp.MustCompile(`(?ms)^GET /(?P<index>\w+)/_search\s(?P<body>.*)`)
+			var src strings.Builder
+
+			re := regexp.MustCompile(`(?ms)^GET /(?P<index>\w+)/_search(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
 			matches := re.FindStringSubmatch(e.Source)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
-			var src strings.Builder
 			src.WriteString("\tres, err := es.Search(\n")
 			fmt.Fprintf(&src, "\tes.Search.WithIndex(%q),\n", matches[1])
-			var body bytes.Buffer
-			json.Indent(&body, []byte(matches[2]), "\t\t", "  ")
-			fmt.Fprintf(&src, "\tes.Search.WithBody(strings.NewReader(`%s`)),\n", body.String())
+
+			body, _ := bodyStringToReader(matches[3])
+			fmt.Fprintf(&src, "\tes.Search.WithBody(%s),\n", body)
+
+			if matches[2] != "" {
+				params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[2], "/"), "?"))
+				if err != nil {
+					return "", fmt.Errorf("error parsing URL params: %s", err)
+				}
+				for k, v := range params {
+					fmt.Fprintf(&src, "\tes.Search.With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				}
+			}
+
 			src.WriteString("\tes.Search.WithPretty(),\n")
+
 			src.WriteString("\t)\n")
 
 			return src.String(), nil
@@ -318,4 +327,21 @@ func (t Translator) Translate() (string, error) {
 func (r TranslateRule) Match(e Example) bool {
 	matched, _ := regexp.MatchString(r.Pattern, e.Source)
 	return matched
+}
+
+// queryToParams extracts the URL params and returns them.
+//
+func queryToParams(input string) (url.Values, error) {
+	input = strings.TrimPrefix(input, "/")
+	input = strings.TrimPrefix(input, "?")
+	return url.ParseQuery(input)
+}
+
+func bodyStringToReader(input string) (string, error) {
+	var body bytes.Buffer
+	err := json.Indent(&body, []byte(input), "\t\t", "  ")
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("strings.NewReader(`%s`)", body.String()), nil
 }
