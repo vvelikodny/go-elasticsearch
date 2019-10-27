@@ -374,7 +374,11 @@ func (cmd *DocCommand) processFile(f *os.File) error {
 		return err
 	}
 
-	out, err := DocGenerator{Source: &src}.Output()
+	out, err := DocGenerator{
+		Source:   &src,
+		Filename: filepath.Base(f.Name()),
+		Digest:   digest,
+	}.Output()
 	if err != nil {
 		return fmt.Errorf("error generating output: ", err)
 	}
