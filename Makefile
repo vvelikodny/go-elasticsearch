@@ -389,8 +389,25 @@ endif
 	}
 
 gen-docs:  ## Generate the skeleton of documentation examples
-	cd internal/cmd/generate && \
-	go run main.go examples --input '$(PWD)/tmp/alternatives_report.json' --output '$(PWD)/tmp/doc-examples'
+	@{ \
+		set -e; \
+		trap "git checkout $(PWD)/internal/cmd/generate/go.mod" SIGINT SIGTERM EXIT; \
+		echo "\033[2m→ Generating Go source files from Console input...\033[0m" && \
+		( cd '$(PWD)/internal/cmd/generate' && \
+			go run main.go examples src --debug --input='$(PWD)/tmp/alternatives_report.json' --output='$(PWD)/.doc/examples/' \
+		) && \
+		( cd '$(PWD)/.doc/examples/src' && \
+			if which gotestsum > /dev/null 2>&1 ; then \
+				gotestsum --format=short-verbose; \
+			else \
+				go test -v $(testunitargs); \
+			fi; \
+		) && \
+		echo "\n\033[2m→ Generating ASCIIDoc files from Go source...\033[0m" && \
+		( cd '$(PWD)/internal/cmd/generate' && \
+			go run main.go examples doc --debug --input='$(PWD)/.doc/examples/src/' --output='$(PWD)/.doc/examples/' \
+		) \
+	}
 
 ##@ Other
 #------------------------------------------------------------------------------
