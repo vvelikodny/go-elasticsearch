@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -67,9 +68,11 @@ var ConsoleToGo = []TranslateRule{
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				for k, v := range params {
-					fmt.Fprintf(&src, "\tes.Index.With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				args, err := paramsToArguments("Index", params)
+				if err != nil {
+					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
+				fmt.Fprintf(&src, args)
 			}
 
 			src.WriteString("\tes.Index.WithPretty(),\n")
@@ -103,9 +106,11 @@ var ConsoleToGo = []TranslateRule{
 					if err != nil {
 						return "", fmt.Errorf("error parsing URL params: %s", err)
 					}
-					for k, v := range params {
-						fmt.Fprintf(&src, "\tes.Indices.Create.With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+					args, err := paramsToArguments("Indices.Create", params)
+					if err != nil {
+						return "", fmt.Errorf("error converting params to arguments: %s", err)
 					}
+					fmt.Fprintf(&src, args)
 				}
 			} else {
 				fmt.Fprintf(&src, "%q", matches[1])
@@ -141,14 +146,17 @@ var ConsoleToGo = []TranslateRule{
 				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(%q, %q, es."+apiName+".WithPretty()", matches[1], matches[3])
 			} else {
 				fmt.Fprintf(&src, "\tres, err := es."+apiName+"(\n\t%q,\n\t%q,\n\t", matches[1], matches[3])
+
 				params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[4], "/"), "?"))
 				if err != nil {
-					fmt.Println(e.Source)
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				for k, v := range params {
-					fmt.Fprintf(&src, "\tes."+apiName+".With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				args, err := paramsToArguments(apiName, params)
+				if err != nil {
+					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
+				fmt.Fprintf(&src, args)
+
 				src.WriteString("\tes." + apiName + ".WithPretty(),\n")
 			}
 
@@ -186,9 +194,12 @@ var ConsoleToGo = []TranslateRule{
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				for k, v := range params {
-					fmt.Fprintf(&src, "\tes."+apiName+".With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				args, err := paramsToArguments(apiName, params)
+				if err != nil {
+					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
+				fmt.Fprintf(&src, args)
+
 				src.WriteString("\tes." + apiName + ".WithPretty(),\n")
 			}
 
@@ -216,19 +227,12 @@ var ConsoleToGo = []TranslateRule{
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				for k, v := range params {
-					val := strings.Join(v, ",")
-					if k == "timeout" {
-						dur, err := time.ParseDuration(v[0])
-						if err != nil {
-							return "", fmt.Errorf("error parsing duration: %s", err)
-						}
-						val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
-					} else {
-						val = strconv.Quote(val)
-					}
-					fmt.Fprintf(&src, "\tes.Delete.With%s(%s),\n", utils.NameToGo(k), val)
+				args, err := paramsToArguments("Delete", params)
+				if err != nil {
+					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
+				fmt.Fprintf(&src, args)
+
 				src.WriteString("\tes.Delete.WithPretty(),\n")
 			} else {
 				fmt.Fprintf(&src, "\t%q, %q, es.Delete.WithPretty()", matches[1], matches[2])
@@ -260,9 +264,11 @@ var ConsoleToGo = []TranslateRule{
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				for k, v := range params {
-					fmt.Fprintf(&src, "\tes.Search.With%s(%q),\n", utils.NameToGo(k), strings.Join(v, ","))
+				args, err := paramsToArguments("Search", params)
+				if err != nil {
+					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
+				fmt.Fprintf(&src, args)
 			}
 
 			src.WriteString("\tes.Search.WithPretty(),\n")
@@ -329,7 +335,7 @@ func (r TranslateRule) Match(e Example) bool {
 	return matched
 }
 
-// queryToParams extracts the URL params and returns them.
+// queryToParams extracts the URL params.
 //
 func queryToParams(input string) (url.Values, error) {
 	input = strings.TrimPrefix(input, "/")
@@ -337,6 +343,36 @@ func queryToParams(input string) (url.Values, error) {
 	return url.ParseQuery(input)
 }
 
+// paramsToArguments converts params to API arguments.
+//
+func paramsToArguments(api string, params url.Values) (string, error) {
+	var b strings.Builder
+
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+	for _, k := range keys {
+		val := strings.Join(params[k], ",")
+		if k == "timeout" {
+			dur, err := time.ParseDuration(params[k][0])
+			if err != nil {
+				return "", fmt.Errorf("error parsing duration: %s", err)
+			}
+			val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
+		} else {
+			val = strconv.Quote(val)
+		}
+		fmt.Fprintf(&b, "\tes.%s.With%s(%s),\n", api, utils.NameToGo(k), val)
+	}
+
+	return b.String(), nil
+}
+
+// bodyStringToReader reformats input JSON string and returns it wrapped in strings.NewReader.
+//
 func bodyStringToReader(input string) (string, error) {
 	var body bytes.Buffer
 	err := json.Indent(&body, []byte(input), "\t\t", "  ")
