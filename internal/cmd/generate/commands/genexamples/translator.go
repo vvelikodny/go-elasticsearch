@@ -20,11 +20,9 @@ import (
 )
 
 const tail = "\t" + `if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 `
 
 // ConsoleToGo contains translation rules.
@@ -319,6 +317,7 @@ func (t Translator) Translate() (string, error) {
 			fmt.Fprintf(&out, "\t// tag:%s[]\n", t.Example.Digest)
 			out.WriteString(src)
 			out.WriteRune('\n')
+			out.WriteString("\tfmt.Println(res, err)\n")
 			fmt.Fprintf(&out, "\t// end:%s[]\n", t.Example.Digest)
 			out.WriteString(tail)
 
