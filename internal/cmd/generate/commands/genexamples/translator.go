@@ -355,13 +355,16 @@ func paramsToArguments(api string, params url.Values) (string, error) {
 	sort.Strings(keys)
 	for _, k := range keys {
 		val := strings.Join(params[k], ",")
-		if k == "timeout" {
+		switch k {
+		case "timeout":
 			dur, err := time.ParseDuration(params[k][0])
 			if err != nil {
 				return "", fmt.Errorf("error parsing duration: %s", err)
 			}
 			val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
-		} else {
+		case "version":
+			val = fmt.Sprintf("%s", val)
+		default:
 			val = strconv.Quote(val)
 		}
 		fmt.Fprintf(&b, "\tes.%s.With%s(%s),\n", api, utils.NameToGo(k), val)
