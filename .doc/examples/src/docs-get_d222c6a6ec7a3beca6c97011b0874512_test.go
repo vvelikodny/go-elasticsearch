@@ -37,11 +37,10 @@ func Test_docs_get_d222c6a6ec7a3beca6c97011b0874512(t *testing.T) {
 		es.GetSource.WithSourceIncludes("*.id"),
 		es.GetSource.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:d222c6a6ec7a3beca6c97011b0874512[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

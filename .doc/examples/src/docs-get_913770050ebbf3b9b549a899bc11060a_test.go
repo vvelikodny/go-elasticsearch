@@ -62,11 +62,10 @@ func Test_docs_get_913770050ebbf3b9b549a899bc11060a(t *testing.T) {
 		  }
 		}`)),
 	)
+	fmt.Println(res, err)
 	// end:913770050ebbf3b9b549a899bc11060a[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

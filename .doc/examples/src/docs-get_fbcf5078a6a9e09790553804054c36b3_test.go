@@ -31,11 +31,10 @@ func Test_docs_get_fbcf5078a6a9e09790553804054c36b3(t *testing.T) {
 
 	// tag:fbcf5078a6a9e09790553804054c36b3[]
 	res, err := es.Get("twitter", "0", es.Get.WithPretty())
+	fmt.Println(res, err)
 	// end:fbcf5078a6a9e09790553804054c36b3[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

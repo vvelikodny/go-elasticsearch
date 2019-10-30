@@ -9,4 +9,5 @@ res, err := es.Get(
 	es.Get.WithStoredFields("tags,counter"),
 	es.Get.WithPretty(),
 )
+fmt.Println(res, err)
 ----

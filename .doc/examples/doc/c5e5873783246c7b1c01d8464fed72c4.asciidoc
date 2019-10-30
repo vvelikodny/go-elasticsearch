@@ -3,4 +3,5 @@
 [source, go]
 ----
 res, err := es.Delete("twitter", "1", es.Delete.WithPretty())
+fmt.Println(res, err)
 ----

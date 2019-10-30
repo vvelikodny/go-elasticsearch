@@ -42,11 +42,10 @@ func Test_getting_started_311c4b632a29b9ead63b02d01f10096b(t *testing.T) {
 		es.Index.WithDocumentID("1"),
 		es.Index.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:311c4b632a29b9ead63b02d01f10096b[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

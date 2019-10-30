@@ -9,4 +9,5 @@ res, err := es.GetSource(
 	es.GetSource.WithSourceIncludes("*.id"),
 	es.GetSource.WithPretty(),
 )
+fmt.Println(res, err)
 ----

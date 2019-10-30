@@ -23,4 +23,5 @@ res, err := es.Search(
 	}`)),
 	es.Search.WithPretty(),
 )
+fmt.Println(res, err)
 ----

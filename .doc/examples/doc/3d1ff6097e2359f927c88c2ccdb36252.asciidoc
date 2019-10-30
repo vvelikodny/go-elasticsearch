@@ -3,4 +3,5 @@
 [source, go]
 ----
 res, err := es.Info()
+fmt.Println(res, err)
 ----

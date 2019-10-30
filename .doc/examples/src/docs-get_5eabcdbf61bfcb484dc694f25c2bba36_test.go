@@ -46,11 +46,10 @@ func Test_docs_get_5eabcdbf61bfcb484dc694f25c2bba36(t *testing.T) {
 		es.Index.WithDocumentID("1"),
 		es.Index.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:5eabcdbf61bfcb484dc694f25c2bba36[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

@@ -3,4 +3,5 @@
 [source, go]
 ----
 res, err := es.ExistsSource("twitter", "_source", es.ExistsSource.WithPretty())
+fmt.Println(res, err)
 ----

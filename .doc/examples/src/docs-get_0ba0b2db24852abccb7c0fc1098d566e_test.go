@@ -47,11 +47,10 @@ func Test_docs_get_0ba0b2db24852abccb7c0fc1098d566e(t *testing.T) {
 		es.Index.WithRouting("user1"),
 		es.Index.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:0ba0b2db24852abccb7c0fc1098d566e[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

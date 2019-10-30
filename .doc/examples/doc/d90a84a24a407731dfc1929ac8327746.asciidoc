@@ -7,4 +7,5 @@ res, err := es.Delete("twitter",
 	es.Delete.WithTimeout(time.Duration(300000000000)),
 	es.Delete.WithPretty(),
 )
+fmt.Println(res, err)
 ----

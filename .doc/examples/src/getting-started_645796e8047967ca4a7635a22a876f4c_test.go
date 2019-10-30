@@ -75,11 +75,10 @@ func Test_getting_started_645796e8047967ca4a7635a22a876f4c(t *testing.T) {
 		}`)),
 		es.Search.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:645796e8047967ca4a7635a22a876f4c[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

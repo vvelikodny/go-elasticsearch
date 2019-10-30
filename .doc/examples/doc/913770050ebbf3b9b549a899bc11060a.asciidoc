@@ -19,4 +19,5 @@ res, err := es.Indices.Create(
 	  }
 	}`)),
 )
+fmt.Println(res, err)
 ----

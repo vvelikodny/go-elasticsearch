@@ -3,4 +3,5 @@
 [source, go]
 ----
 res, err := es.Cat.Health(es.Cat.Health.WithV(true))
+fmt.Println(res, err)
 ----

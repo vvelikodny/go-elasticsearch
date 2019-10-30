@@ -36,11 +36,10 @@ func Test_docs_get_710c7871f20f176d51209b1574b0d61b(t *testing.T) {
 		es.Get.WithStoredFields("tags,counter"),
 		es.Get.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:710c7871f20f176d51209b1574b0d61b[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

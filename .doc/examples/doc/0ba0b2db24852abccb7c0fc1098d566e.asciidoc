@@ -14,4 +14,5 @@ res, err := es.Index(
 	es.Index.WithRouting("user1"),
 	es.Index.WithPretty(),
 )
+fmt.Println(res, err)
 ----

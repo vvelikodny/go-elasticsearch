@@ -36,11 +36,10 @@ func Test_docs_delete_d90a84a24a407731dfc1929ac8327746(t *testing.T) {
 		es.Delete.WithTimeout(time.Duration(300000000000)),
 		es.Delete.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:d90a84a24a407731dfc1929ac8327746[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }

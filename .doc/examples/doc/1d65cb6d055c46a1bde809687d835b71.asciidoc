@@ -8,4 +8,5 @@ res, err := es.Get(
 	es.Get.WithRouting("user1"),
 	es.Get.WithPretty(),
 )
+fmt.Println(res, err)
 ----

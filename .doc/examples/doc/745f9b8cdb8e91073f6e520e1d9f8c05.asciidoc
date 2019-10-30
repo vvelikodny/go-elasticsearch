@@ -8,4 +8,5 @@ res, err := es.Get(
 	es.Get.WithSource("*.id,retweeted"),
 	es.Get.WithPretty(),
 )
+fmt.Println(res, err)
 ----

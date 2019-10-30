@@ -3,4 +3,5 @@
 [source, go]
 ----
 res, err := es.Get("customer", "1", es.Get.WithPretty())
+fmt.Println(res, err)
 ----

@@ -7,4 +7,5 @@ res, err := es.Delete("twitter",
 	es.Delete.WithRouting("kimchy"),
 	es.Delete.WithPretty(),
 )
+fmt.Println(res, err)
 ----

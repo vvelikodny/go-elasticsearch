@@ -36,11 +36,10 @@ func Test_docs_get_745f9b8cdb8e91073f6e520e1d9f8c05(t *testing.T) {
 		es.Get.WithSource("*.id,retweeted"),
 		es.Get.WithPretty(),
 	)
+	fmt.Println(res, err)
 	// end:745f9b8cdb8e91073f6e520e1d9f8c05[]
 	if err != nil {
-		fmt.Println("Error getting the response:", err)
-		os.Exit(1)
+		t.Fatalf("Error getting the response: %s", err)
 	}
 	defer res.Body.Close()
-	fmt.Println(res)
 }
