@@ -32,9 +32,9 @@ func Test_setup_install_check_running_3d1ff6097e2359f927c88c2ccdb36252(t *testin
 	// tag:3d1ff6097e2359f927c88c2ccdb36252[]
 	res, err := es.Info()
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:3d1ff6097e2359f927c88c2ccdb36252[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

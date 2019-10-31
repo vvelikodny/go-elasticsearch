@@ -70,9 +70,9 @@ func Test_getting_started_cfbaea6f0df045c5d940bbb6a9c69cd8(t *testing.T) {
 		es.Search.WithPretty(),
 	)
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:cfbaea6f0df045c5d940bbb6a9c69cd8[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

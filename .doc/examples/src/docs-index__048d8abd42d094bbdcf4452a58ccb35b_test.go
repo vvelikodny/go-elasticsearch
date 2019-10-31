@@ -21,31 +21,33 @@ var (
 	_ = elasticsearch.NewDefaultClient
 )
 
-// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/getting-started.asciidoc#L214>
+// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/docs/index_.asciidoc#L485>
 //
 // --------------------------------------------------------------------------------
-// PUT /customer/_doc/1
+// PUT twitter/_create/1
 // {
-//   "name": "John Doe"
+//     "user" : "kimchy",
+//     "post_date" : "2009-11-15T14:12:12",
+//     "message" : "trying out Elasticsearch"
 // }
 // --------------------------------------------------------------------------------
 
-func Test_getting_started_311c4b632a29b9ead63b02d01f10096b(t *testing.T) {
+func Test_docs_index__048d8abd42d094bbdcf4452a58ccb35b(t *testing.T) {
 	es, _ := elasticsearch.NewDefaultClient()
 
-	// tag:311c4b632a29b9ead63b02d01f10096b[]
-	res, err := es.Index(
-		"customer",
-		strings.NewReader(`{
-		  "name": "John Doe"
-		}`),
-		es.Index.WithDocumentID("1"),
-		es.Index.WithPretty(),
+	// tag:048d8abd42d094bbdcf4452a58ccb35b[]
+	res, err := es.Indices.Create(
+		"twitter/_create/1",
+		es.Indices.Create.WithBody(strings.NewReader(`{
+		  "user": "kimchy",
+		  "post_date": "2009-11-15T14:12:12",
+		  "message": "trying out Elasticsearch"
+		}`)),
 	)
 	fmt.Println(res, err)
 	if err != nil { // SKIP
 		t.Fatalf("Error getting the response: %s", err) // SKIP
 	} // SKIP
 	defer res.Body.Close() // SKIP
-	// end:311c4b632a29b9ead63b02d01f10096b[]
+	// end:048d8abd42d094bbdcf4452a58ccb35b[]
 }

@@ -37,9 +37,9 @@ func Test_docs_get_710c7871f20f176d51209b1574b0d61b(t *testing.T) {
 		es.Get.WithPretty(),
 	)
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:710c7871f20f176d51209b1574b0d61b[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

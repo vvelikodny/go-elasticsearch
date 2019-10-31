@@ -32,9 +32,9 @@ func Test_getting_started_f8cc4b331a19ff4df8e4a490f906ee69(t *testing.T) {
 	// tag:f8cc4b331a19ff4df8e4a490f906ee69[]
 	res, err := es.Cat.Health(es.Cat.Health.WithV(true))
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:f8cc4b331a19ff4df8e4a490f906ee69[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

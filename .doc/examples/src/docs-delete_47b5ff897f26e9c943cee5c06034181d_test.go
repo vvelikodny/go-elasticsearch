@@ -36,9 +36,9 @@ func Test_docs_delete_47b5ff897f26e9c943cee5c06034181d(t *testing.T) {
 		es.Delete.WithPretty(),
 	)
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:47b5ff897f26e9c943cee5c06034181d[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

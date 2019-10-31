@@ -32,9 +32,9 @@ func Test_docs_delete_c5e5873783246c7b1c01d8464fed72c4(t *testing.T) {
 	// tag:c5e5873783246c7b1c01d8464fed72c4[]
 	res, err := es.Delete("twitter", "1", es.Delete.WithPretty())
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:c5e5873783246c7b1c01d8464fed72c4[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

@@ -63,9 +63,9 @@ func Test_docs_get_913770050ebbf3b9b549a899bc11060a(t *testing.T) {
 		}`)),
 	)
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:913770050ebbf3b9b549a899bc11060a[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

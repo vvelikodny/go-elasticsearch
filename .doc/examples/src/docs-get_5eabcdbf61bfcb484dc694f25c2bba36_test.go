@@ -47,9 +47,9 @@ func Test_docs_get_5eabcdbf61bfcb484dc694f25c2bba36(t *testing.T) {
 		es.Index.WithPretty(),
 	)
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:5eabcdbf61bfcb484dc694f25c2bba36[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

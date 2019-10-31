@@ -32,9 +32,9 @@ func Test_docs_get_89a8ac1509936acc272fc2d72907bc45(t *testing.T) {
 	// tag:89a8ac1509936acc272fc2d72907bc45[]
 	res, err := es.GetSource("twitter", "1", es.GetSource.WithPretty())
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:89a8ac1509936acc272fc2d72907bc45[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }

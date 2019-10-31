@@ -32,9 +32,9 @@ func Test_getting_started_3f3b3e207f79303ce6f86e03e928e062(t *testing.T) {
 	// tag:3f3b3e207f79303ce6f86e03e928e062[]
 	res, err := es.Get("customer", "1", es.Get.WithPretty())
 	fmt.Println(res, err)
+	if err != nil { // SKIP
+		t.Fatalf("Error getting the response: %s", err) // SKIP
+	} // SKIP
+	defer res.Body.Close() // SKIP
 	// end:3f3b3e207f79303ce6f86e03e928e062[]
-	if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
 }
