@@ -5,6 +5,7 @@
 package genexamples
 
 import (
+	"bufio"
 	"fmt"
 	"regexp"
 	"sort"
@@ -20,10 +21,15 @@ func init() {
 var EnabledFiles = []string{
 	"docs/delete.asciidoc",
 	"docs/get.asciidoc",
-	"docs/index.asciidoc",
+	"docs/index_.asciidoc",
 	"getting-started.asciidoc",
 	"setup/install/check-running.asciidoc",
 }
+
+var (
+	reHTTPMethod = regexp.MustCompile(`^HEAD|GET|PUT|DELETE|POST`)
+	reAnnotation = regexp.MustCompile(`^(?P<line>.*)\s*\<\d\>\s*$`)
+)
 
 // Example represents the code example in documentation.
 //
@@ -54,8 +60,7 @@ func (e Example) IsEnabled() bool {
 // IsExecutable returns true when the example contains a request.
 //
 func (e Example) IsExecutable() bool {
-	matched, _ := regexp.MatchString(`^HEAD|GET|PUT|DELETE|POST`, e.Source)
-	return matched
+	return reHTTPMethod.MatchString(e.Source)
 }
 
 // IsTranslated returns true when the example can be converted to Go source code.
@@ -81,6 +86,42 @@ func (e Example) Chapter() string {
 //
 func (e Example) GithubURL() string {
 	return fmt.Sprintf("https://github.com/elastic/elasticsearch/blob/master/docs/reference/%s#L%d", e.SourceLocation.File, e.SourceLocation.Line)
+}
+
+// Commands returns the list of commands from source.
+//
+func (e Example) Commands() ([]string, error) {
+	var (
+		buf  strings.Builder
+		list []string
+		scan = bufio.NewScanner(strings.NewReader(e.Source))
+	)
+
+	for scan.Scan() {
+		line := scan.Text()
+
+		line = reAnnotation.ReplaceAllString(line, "$1")
+
+		if reHTTPMethod.MatchString(line) {
+			if buf.Len() > 0 {
+				list = append(list, buf.String())
+			}
+			buf.Reset()
+		}
+
+		buf.WriteString(line)
+		buf.WriteString("\n")
+	}
+
+	if err := scan.Err(); err != nil {
+		return list, err
+	}
+
+	if buf.Len() > 0 {
+		list = append(list, buf.String())
+	}
+
+	return list, nil
 }
 
 // Translated returns the code translated from Console to Go.
