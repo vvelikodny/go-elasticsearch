@@ -347,6 +347,7 @@ func (cmd *DocCommand) processFile(f *os.File) error {
 		sc         = bufio.NewScanner(f)
 		reBegin    = regexp.MustCompile(`^\s?// tag:(\w+)\s?`)
 		reEnd      = regexp.MustCompile(`^\s?// end:\w+\s?`)
+		reSkip     = regexp.MustCompile(`// SKIP$`)
 		digest     string
 		capture    bool
 		outputFile string
@@ -363,7 +364,7 @@ func (cmd *DocCommand) processFile(f *os.File) error {
 			capture = false
 		}
 
-		if capture && !reBegin.MatchString(line) {
+		if capture && !reBegin.MatchString(line) && !reSkip.MatchString(line) {
 			line = strings.TrimPrefix(line, "\t")
 			src.WriteString(line)
 			src.WriteString("\n")

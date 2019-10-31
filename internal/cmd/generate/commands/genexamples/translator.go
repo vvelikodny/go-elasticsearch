@@ -19,10 +19,10 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/internal/cmd/generate/utils"
 )
 
-const tail = "\t" + `if err != nil {
-		t.Fatalf("Error getting the response: %s", err)
-	}
-	defer res.Body.Close()
+const testCheck = "\t" + `if err != nil {            // SKIP
+		t.Fatalf("Error getting the response: %s", err)	 // SKIP
+	}                                                  // SKIP
+	defer res.Body.Close()                             // SKIP
 `
 
 // ConsoleToGo contains translation rules.
@@ -31,38 +31,43 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Info() -----------------------------------------------------------
 		Pattern: "^GET /$",
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			return "res, err := es.Info()", nil
 		}},
 
 	{ // ----- Cat.Health() -----------------------------------------------------
 		Pattern: `^GET /_cat/health\?v`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			return "\tres, err := es.Cat.Health(es.Cat.Health.WithV(true))", nil
 		}},
 
 	{ // ----- Index() ---------------------------------------------------------
-		Pattern: `^PUT /?\w+/_doc/\w+`,
-		Func: func(e Example) (string, error) {
+		Pattern: `^(PUT|POST) /?\w+/_doc/?`,
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
-			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>\w+)/_doc/(?P<id>\w+)(?P<params>\??[\S]+)?\s(?P<body>.*)`)
-			matches := re.FindStringSubmatch(e.Source)
+			re := regexp.MustCompile(`(?ms)^(?P<method>PUT|POST) /?(?P<index>\w+)/_doc/?(?P<id>\w+)?(?P<params>\??[\S]+)?\s?(?P<body>.*)`)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
 			src.WriteString("\tres, err := es.Index(\n")
 
-			fmt.Fprintf(&src, "\t%q,\n", matches[1])
+			fmt.Fprintf(&src, "\t%q,\n", matches[2])
 
-			body, _ := bodyStringToReader(matches[4])
+			body, err := bodyStringToReader(matches[5])
+			if err != nil {
+				return "", fmt.Errorf("error converting body: %s", err)
+			}
 			fmt.Fprintf(&src, "\t%s,\n", body)
 
-			fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[2])
-
 			if matches[3] != "" {
-				params, err := queryToParams(matches[3])
+				fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[3])
+			}
+
+			if matches[4] != "" {
+				params, err := queryToParams(matches[4])
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
@@ -81,11 +86,11 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Indices.Create() -------------------------------------------------
 		Pattern: `^PUT /?[\S]+\s?(?P<body>.+)?`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
 			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>[\S]+)(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
-			matches := re.FindStringSubmatch(e.Source)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
@@ -95,7 +100,10 @@ var ConsoleToGo = []TranslateRule{
 				fmt.Fprintf(&src, "\n\t%q,\n", matches[1])
 
 				if matches[3] != "" {
-					body, _ := bodyStringToReader(matches[3])
+					body, err := bodyStringToReader(matches[3])
+					if err != nil {
+						return "", fmt.Errorf("error converting body: %s", err)
+					}
 					fmt.Fprintf(&src, "\tes.Indices.Create.WithBody(%s),\n", body)
 				}
 
@@ -121,11 +129,11 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Get() or GetSource() ---------------------------------------------
 		Pattern: `^GET /?\w+/(_doc|_source)/\w+`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
 			re := regexp.MustCompile(`(?ms)^GET /?(?P<index>\w+)/(?P<api>_doc|_source)/(?P<id>\w+)(?P<params>\??\S+)?\s*$`)
-			matches := re.FindStringSubmatch(e.Source)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
@@ -165,11 +173,11 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Exists() or ExistsSource() ---------------------------------------
 		Pattern: `^HEAD /?\w+/(_doc|_source)/\w+`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
 			re := regexp.MustCompile(`(?ms)^HEAD /?(?P<index>\w+)/(?P<api>_doc|_source)/(?P<id>\w+)(?P<params>\??[\S]+)?\s*$`)
-			matches := re.FindStringSubmatch(e.Source)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
@@ -208,11 +216,11 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Delete() ---------------------------------------------------------
 		Pattern: `^DELETE /?\w+/_doc/\w+`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
 			re := regexp.MustCompile(`(?ms)^DELETE /?(?P<index>\w+)/_doc/(?P<id>\w+)(?P<params>\??\S+)?\s*$`)
-			matches := re.FindStringSubmatch(e.Source)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
@@ -242,11 +250,11 @@ var ConsoleToGo = []TranslateRule{
 
 	{ // ----- Search() ---------------------------------------------------------
 		Pattern: `^GET /\w+/_search`,
-		Func: func(e Example) (string, error) {
+		Func: func(in string) (string, error) {
 			var src strings.Builder
 
 			re := regexp.MustCompile(`(?ms)^GET /(?P<index>\w+)/_search(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
-			matches := re.FindStringSubmatch(e.Source)
+			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
@@ -254,7 +262,10 @@ var ConsoleToGo = []TranslateRule{
 			src.WriteString("\tres, err := es.Search(\n")
 			fmt.Fprintf(&src, "\tes.Search.WithIndex(%q),\n", matches[1])
 
-			body, _ := bodyStringToReader(matches[3])
+			body, err := bodyStringToReader(matches[3])
+			if err != nil {
+				return "", fmt.Errorf("error converting body: %s", err)
+			}
 			fmt.Fprintf(&src, "\tes.Search.WithBody(%s),\n", body)
 
 			if matches[2] != "" {
@@ -287,7 +298,7 @@ type Translator struct {
 //
 type TranslateRule struct {
 	Pattern string
-	Func    func(Example) (string, error)
+	Func    func(string) (string, error)
 }
 
 // IsTranslated returns true when a rule for translating the Console example to Go source code exists.
@@ -308,18 +319,34 @@ func (t Translator) Translate() (string, error) {
 		if r.Match(t.Example) {
 			var out strings.Builder
 
-			src, err := r.Func(t.Example)
+			cmds, err := t.Example.Commands()
 			if err != nil {
-				return "", fmt.Errorf("error translating the example: %s", err)
+				return "", fmt.Errorf("error getting example commands: %s", err)
 			}
 
 			out.WriteRune('\n')
 			fmt.Fprintf(&out, "\t// tag:%s[]\n", t.Example.Digest)
-			out.WriteString(src)
-			out.WriteRune('\n')
-			out.WriteString("\tfmt.Println(res, err)\n")
+			for i, c := range cmds {
+				src, err := r.Func(c)
+				if err != nil {
+					return "", fmt.Errorf("error translating the example: %s", err)
+				}
+
+				if len(cmds) > 1 {
+					out.WriteString("\t{\n")
+				}
+				out.WriteString(src)
+				out.WriteRune('\n')
+				out.WriteString("\tfmt.Println(res, err)\n")
+				out.WriteString(testCheck)
+				if len(cmds) > 1 {
+					out.WriteString("\t}\n")
+					if i != len(cmds)-1 {
+						out.WriteString("\n")
+					}
+				}
+			}
 			fmt.Fprintf(&out, "\t// end:%s[]\n", t.Example.Digest)
-			out.WriteString(tail)
 
 			return out.String(), nil
 		}
@@ -381,5 +408,5 @@ func bodyStringToReader(input string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("strings.NewReader(`%s`)", body.String()), nil
+	return fmt.Sprintf("strings.NewReader(`%s`)", strings.TrimRight(body.String(), "\n")), nil
 }
