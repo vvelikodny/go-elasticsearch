@@ -2,13 +2,15 @@
 //
 [source, go]
 ----
-res, err := es.Indices.Create(
-	"twitter/_create/1",
-	es.Indices.Create.WithBody(strings.NewReader(`{
+res, err := es.Create(
+	"twitter",
+	"1",
+	strings.NewReader(`{
 	  "user": "kimchy",
 	  "post_date": "2009-11-15T14:12:12",
 	  "message": "trying out Elasticsearch"
-	}`)),
+	}`),
+	es.Create.WithPretty(),
 )
 fmt.Println(res, err)
 ----

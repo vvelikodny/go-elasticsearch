@@ -51,14 +51,12 @@ func Test_docs_index__804a97ff4d0613e6568e4efb19c52021(t *testing.T) {
 
 	// tag:804a97ff4d0613e6568e4efb19c52021[]
 	{
-		res, err := es.Indices.Create(
-			"_cluster/settings",
-			es.Indices.Create.WithBody(strings.NewReader(`{
+		res, err := es.Cluster.PutSettings(
+			strings.NewReader(`{
 		  "persistent": {
 		    "action.auto_create_index": "twitter,index10,-index1*,+ind*"
 		  }
-		}`)),
-		)
+		}`))
 		fmt.Println(res, err)
 		if err != nil { // SKIP
 			t.Fatalf("Error getting the response: %s", err) // SKIP
@@ -67,14 +65,12 @@ func Test_docs_index__804a97ff4d0613e6568e4efb19c52021(t *testing.T) {
 	}
 
 	{
-		res, err := es.Indices.Create(
-			"_cluster/settings",
-			es.Indices.Create.WithBody(strings.NewReader(`{
+		res, err := es.Cluster.PutSettings(
+			strings.NewReader(`{
 		  "persistent": {
 		    "action.auto_create_index": "false"
 		  }
-		}`)),
-		)
+		}`))
 		fmt.Println(res, err)
 		if err != nil { // SKIP
 			t.Fatalf("Error getting the response: %s", err) // SKIP
@@ -83,14 +79,12 @@ func Test_docs_index__804a97ff4d0613e6568e4efb19c52021(t *testing.T) {
 	}
 
 	{
-		res, err := es.Indices.Create(
-			"_cluster/settings",
-			es.Indices.Create.WithBody(strings.NewReader(`{
+		res, err := es.Cluster.PutSettings(
+			strings.NewReader(`{
 		  "persistent": {
 		    "action.auto_create_index": "true"
 		  }
-		}`)),
-		)
+		}`))
 		fmt.Println(res, err)
 		if err != nil { // SKIP
 			t.Fatalf("Error getting the response: %s", err) // SKIP

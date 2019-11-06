@@ -36,13 +36,15 @@ func Test_docs_index__048d8abd42d094bbdcf4452a58ccb35b(t *testing.T) {
 	es, _ := elasticsearch.NewDefaultClient()
 
 	// tag:048d8abd42d094bbdcf4452a58ccb35b[]
-	res, err := es.Indices.Create(
-		"twitter/_create/1",
-		es.Indices.Create.WithBody(strings.NewReader(`{
+	res, err := es.Create(
+		"twitter",
+		"1",
+		strings.NewReader(`{
 		  "user": "kimchy",
 		  "post_date": "2009-11-15T14:12:12",
 		  "message": "trying out Elasticsearch"
-		}`)),
+		}`),
+		es.Create.WithPretty(),
 	)
 	fmt.Println(res, err)
 	if err != nil { // SKIP

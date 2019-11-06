@@ -3,38 +3,32 @@
 [source, go]
 ----
 {
-	res, err := es.Indices.Create(
-		"_cluster/settings",
-		es.Indices.Create.WithBody(strings.NewReader(`{
+	res, err := es.Cluster.PutSettings(
+		strings.NewReader(`{
 	  "persistent": {
 	    "action.auto_create_index": "twitter,index10,-index1*,+ind*"
 	  }
-	}`)),
-	)
+	}`))
 	fmt.Println(res, err)
 }
 
 {
-	res, err := es.Indices.Create(
-		"_cluster/settings",
-		es.Indices.Create.WithBody(strings.NewReader(`{
+	res, err := es.Cluster.PutSettings(
+		strings.NewReader(`{
 	  "persistent": {
 	    "action.auto_create_index": "false"
 	  }
-	}`)),
-	)
+	}`))
 	fmt.Println(res, err)
 }
 
 {
-	res, err := es.Indices.Create(
-		"_cluster/settings",
-		es.Indices.Create.WithBody(strings.NewReader(`{
+	res, err := es.Cluster.PutSettings(
+		strings.NewReader(`{
 	  "persistent": {
 	    "action.auto_create_index": "true"
 	  }
-	}`)),
-	)
+	}`))
 	fmt.Println(res, err)
 }
 ----
