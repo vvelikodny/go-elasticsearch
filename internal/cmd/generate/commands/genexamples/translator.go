@@ -41,6 +41,29 @@ var ConsoleToGo = []TranslateRule{
 			return "\tres, err := es.Cat.Health(es.Cat.Health.WithV(true))", nil
 		}},
 
+	{ // ----- Cluster.PutSettings() --------------------------------------------
+		Pattern: `^PUT /?_cluster/settings`,
+		Func: func(in string) (string, error) {
+			var src strings.Builder
+
+			re := regexp.MustCompile(`(?ms)^(?P<method>PUT) /?_cluster/settings/?(?P<params>\??[\S]+)?\s?(?P<body>.*)`)
+			matches := re.FindStringSubmatch(in)
+			if matches == nil {
+				return "", errors.New("cannot match example source to pattern")
+			}
+
+			fmt.Fprintf(&src, "\tres, err := es.Cluster.PutSettings(\n")
+			body, err := bodyStringToReader(matches[3])
+			if err != nil {
+				return "", fmt.Errorf("error converting body: %s", err)
+			}
+			fmt.Fprintf(&src, "\t%s", body)
+			src.WriteString(")")
+
+			return src.String(), nil
+
+		}},
+
 	{ // ----- Index() or Create() ----------------------------------------------
 		Pattern: `^(PUT|POST) /?\w+/(_doc|_create)/?.*`,
 		Func: func(in string) (string, error) {
