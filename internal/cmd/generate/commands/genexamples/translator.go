@@ -41,55 +41,70 @@ var ConsoleToGo = []TranslateRule{
 			return "\tres, err := es.Cat.Health(es.Cat.Health.WithV(true))", nil
 		}},
 
-	{ // ----- Index() ---------------------------------------------------------
-		Pattern: `^(PUT|POST) /?\w+/_doc/?`,
+	{ // ----- Index() or Create() ----------------------------------------------
+		Pattern: `^(PUT|POST) /?\w+/(_doc|_create)/?.*`,
 		Func: func(in string) (string, error) {
-			var src strings.Builder
+			var (
+				src     strings.Builder
+				apiName string
+			)
 
-			re := regexp.MustCompile(`(?ms)^(?P<method>PUT|POST) /?(?P<index>\w+)/_doc/?(?P<id>\w+)?(?P<params>\??[\S]+)?\s?(?P<body>.*)`)
+			re := regexp.MustCompile(`(?ms)^(?P<method>PUT|POST) /?(?P<index>\w+)/(?P<api>_doc|_create)/?(?P<id>\w+)?(?P<params>\??[\S]+)?\s?(?P<body>.*)`)
 			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
-			src.WriteString("\tres, err := es.Index(\n")
+			if matches[3] == "_create" {
+				apiName = "Create"
+			} else {
+				apiName = "Index"
+			}
+
+			src.WriteString("\tres, err := es." + apiName + "(\n")
 
 			fmt.Fprintf(&src, "\t%q,\n", matches[2])
 
-			body, err := bodyStringToReader(matches[5])
+			if apiName == "Create" {
+				fmt.Fprintf(&src, "\t%q,\n", matches[4])
+			}
+
+			body, err := bodyStringToReader(matches[6])
 			if err != nil {
 				return "", fmt.Errorf("error converting body: %s", err)
 			}
 			fmt.Fprintf(&src, "\t%s,\n", body)
 
-			if matches[3] != "" {
-				fmt.Fprintf(&src, "\tes.Index.WithDocumentID(%q),\n", matches[3])
+			if apiName == "Index" {
+				if matches[4] != "" {
+					fmt.Fprintf(&src, "\tes."+apiName+".WithDocumentID(%q),\n", matches[4])
+				}
 			}
 
-			if matches[4] != "" {
-				params, err := queryToParams(matches[4])
+			if matches[5] != "" {
+				params, err := queryToParams(matches[5])
 				if err != nil {
 					return "", fmt.Errorf("error parsing URL params: %s", err)
 				}
-				args, err := paramsToArguments("Index", params)
+				args, err := paramsToArguments(apiName, params)
 				if err != nil {
 					return "", fmt.Errorf("error converting params to arguments: %s", err)
 				}
 				fmt.Fprintf(&src, args)
 			}
 
-			src.WriteString("\tes.Index.WithPretty(),\n")
+			src.WriteString("\tes." + apiName + ".WithPretty(),\n")
 			src.WriteString("\t)")
 
 			return src.String(), nil
 		}},
 
 	{ // ----- Indices.Create() -------------------------------------------------
-		Pattern: `^PUT /?[\S]+\s?(?P<body>.+)?`,
+		Pattern: `^PUT /?[^/\s]+\s?(?P<body>.+)?`,
 		Func: func(in string) (string, error) {
 			var src strings.Builder
 
-			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>[\S]+)(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
+			re := regexp.MustCompile(`(?ms)^PUT /?(?P<index>[^/\s]+)(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
 			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
