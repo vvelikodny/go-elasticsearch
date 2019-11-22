@@ -9,7 +9,6 @@ package elasticsearch_test
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v8"
@@ -21,34 +20,26 @@ var (
 	_ = elasticsearch.NewDefaultClient
 )
 
-// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/docs/index_.asciidoc#L195>
+// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/search/request-body.asciidoc#L156>
 //
 // --------------------------------------------------------------------------------
-// POST twitter/_doc/
-// {
-//     "user" : "kimchy",
-//     "post_date" : "2009-11-15T14:12:12",
-//     "message" : "trying out Elasticsearch"
-// }
+// GET /_search?q=message:number&size=0&terminate_after=1
 // --------------------------------------------------------------------------------
 
-func Test_docs_index__36818c6d9f434d387819c30bd9addb14(t *testing.T) {
+func Test_search_request_body_bfcd65ab85d684d36a8550080032958d(t *testing.T) {
 	es, _ := elasticsearch.NewDefaultClient()
 
-	// tag:36818c6d9f434d387819c30bd9addb14[]
-	res, err := es.Index(
-		"twitter",
-		strings.NewReader(`{
-		  "user": "kimchy",
-		  "post_date": "2009-11-15T14:12:12",
-		  "message": "trying out Elasticsearch"
-		}`),
-		es.Index.WithPretty(),
+	// tag:bfcd65ab85d684d36a8550080032958d[]
+	res, err := es.Search(
+		es.Search.WithQuery("message:number"),
+		es.Search.WithSize(0),
+		es.Search.WithTerminateAfter(1),
+		es.Search.WithPretty(),
 	)
 	fmt.Println(res, err)
 	if err != nil { // SKIP
 		t.Fatalf("Error getting the response: %s", err) // SKIP
 	} // SKIP
 	defer res.Body.Close() // SKIP
-	// end:36818c6d9f434d387819c30bd9addb14[]
+	// end:bfcd65ab85d684d36a8550080032958d[]
 }

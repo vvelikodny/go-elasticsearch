@@ -22,7 +22,7 @@ var (
 	_ = elasticsearch.NewDefaultClient
 )
 
-// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/docs/index_.asciidoc#L365>
+// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/docs/index_.asciidoc#L366>
 //
 // --------------------------------------------------------------------------------
 // PUT twitter/_doc/1?timeout=5m

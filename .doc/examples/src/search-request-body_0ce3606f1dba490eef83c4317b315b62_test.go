@@ -21,34 +21,36 @@ var (
 	_ = elasticsearch.NewDefaultClient
 )
 
-// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/docs/index_.asciidoc#L195>
+// <https://github.com/elastic/elasticsearch/blob/master/docs/reference/search/request-body.asciidoc#L7>
 //
 // --------------------------------------------------------------------------------
-// POST twitter/_doc/
+// GET /twitter/_search
 // {
-//     "user" : "kimchy",
-//     "post_date" : "2009-11-15T14:12:12",
-//     "message" : "trying out Elasticsearch"
+//     "query" : {
+//         "term" : { "user" : "kimchy" }
+//     }
 // }
 // --------------------------------------------------------------------------------
 
-func Test_docs_index__36818c6d9f434d387819c30bd9addb14(t *testing.T) {
+func Test_search_request_body_0ce3606f1dba490eef83c4317b315b62(t *testing.T) {
 	es, _ := elasticsearch.NewDefaultClient()
 
-	// tag:36818c6d9f434d387819c30bd9addb14[]
-	res, err := es.Index(
-		"twitter",
-		strings.NewReader(`{
-		  "user": "kimchy",
-		  "post_date": "2009-11-15T14:12:12",
-		  "message": "trying out Elasticsearch"
-		}`),
-		es.Index.WithPretty(),
+	// tag:0ce3606f1dba490eef83c4317b315b62[]
+	res, err := es.Search(
+		es.Search.WithIndex("twitter"),
+		es.Search.WithBody(strings.NewReader(`{
+		  "query": {
+		    "term": {
+		      "user": "kimchy"
+		    }
+		  }
+		}`)),
+		es.Search.WithPretty(),
 	)
 	fmt.Println(res, err)
 	if err != nil { // SKIP
 		t.Fatalf("Error getting the response: %s", err) // SKIP
 	} // SKIP
 	defer res.Body.Close() // SKIP
-	// end:36818c6d9f434d387819c30bd9addb14[]
+	// end:0ce3606f1dba490eef83c4317b315b62[]
 }
