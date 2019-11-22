@@ -287,24 +287,28 @@ var ConsoleToGo = []TranslateRule{
 		}},
 
 	{ // ----- Search() ---------------------------------------------------------
-		Pattern: `^GET /\w+/_search`,
+		Pattern: `^GET /?(\w+)?/_search`,
 		Func: func(in string) (string, error) {
 			var src strings.Builder
 
-			re := regexp.MustCompile(`(?ms)^GET /(?P<index>\w+)/_search(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
+			re := regexp.MustCompile(`(?ms)^GET /?(?P<index>\w+)?/_search(?P<params>\??[\S/]+)?\s?(?P<body>.+)?`)
 			matches := re.FindStringSubmatch(in)
 			if matches == nil {
 				return "", errors.New("cannot match example source to pattern")
 			}
 
 			src.WriteString("\tres, err := es.Search(\n")
-			fmt.Fprintf(&src, "\tes.Search.WithIndex(%q),\n", matches[1])
-
-			body, err := bodyStringToReader(matches[3])
-			if err != nil {
-				return "", fmt.Errorf("error converting body: %s", err)
+			if matches[1] != "" {
+				fmt.Fprintf(&src, "\tes.Search.WithIndex(%q),\n", matches[1])
 			}
-			fmt.Fprintf(&src, "\tes.Search.WithBody(%s),\n", body)
+
+			if matches[3] != "" {
+				body, err := bodyStringToReader(matches[3])
+				if err != nil {
+					return "", fmt.Errorf("error converting body: %s", err)
+				}
+				fmt.Fprintf(&src, "\tes.Search.WithBody(%s),\n", body)
+			}
 
 			if matches[2] != "" {
 				params, err := url.ParseQuery(strings.TrimPrefix(strings.TrimPrefix(matches[2], "/"), "?"))
@@ -419,20 +423,33 @@ func paramsToArguments(api string, params url.Values) (string, error) {
 
 	sort.Strings(keys)
 	for _, k := range keys {
-		val := strings.Join(params[k], ",")
+		var (
+			name  string
+			value string
+		)
+
+		value = strings.Join(params[k], ",")
+
 		switch k {
-		case "timeout":
+		case "q":
+			name = "Query"
+		default:
+			name = utils.NameToGo(k)
+		}
+
+		switch k {
+		case "timeout": // duration
 			dur, err := time.ParseDuration(params[k][0])
 			if err != nil {
 				return "", fmt.Errorf("error parsing duration: %s", err)
 			}
-			val = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
-		case "version":
-			val = fmt.Sprintf("%s", val)
+			value = fmt.Sprintf("time.Duration(%d)", time.Duration(dur))
+		case "from", "size", "terminate_after", "version": // numeric
+			value = fmt.Sprintf("%s", value)
 		default:
-			val = strconv.Quote(val)
+			value = strconv.Quote(value)
 		}
-		fmt.Fprintf(&b, "\tes.%s.With%s(%s),\n", api, utils.NameToGo(k), val)
+		fmt.Fprintf(&b, "\tes.%s.With%s(%s),\n", api, name, value)
 	}
 
 	return b.String(), nil

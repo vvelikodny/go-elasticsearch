@@ -23,6 +23,7 @@ var EnabledFiles = []string{
 	"docs/get.asciidoc",
 	"docs/index_.asciidoc",
 	"getting-started.asciidoc",
+	"search/request-body.asciidoc",
 	"setup/install/check-running.asciidoc",
 }
 
