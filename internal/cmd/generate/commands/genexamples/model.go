@@ -23,6 +23,7 @@ var EnabledFiles = []string{
 	"docs/get.asciidoc",
 	"docs/index_.asciidoc",
 	"getting-started.asciidoc",
+	"query-dsl/query-string-query.asciidoc",
 	"search/request-body.asciidoc",
 	"setup/install/check-running.asciidoc",
 }
@@ -49,6 +50,8 @@ type Example struct {
 // IsEnabled returns true when the example should be processed.
 //
 func (e Example) IsEnabled() bool {
+	// TODO(karmi): Use "filepatch.Match()" to support glob patterns
+
 	index := sort.SearchStrings(EnabledFiles, e.SourceLocation.File)
 
 	if index > len(EnabledFiles)-1 || EnabledFiles[index] != e.SourceLocation.File {
